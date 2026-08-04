@@ -73,8 +73,8 @@ googleSignInBtn.addEventListener("click", async () => {
   googleSignInBtn.textContent = "Вход...";
 
   try {
-    await firebaseStore.signInWithGoogle();
-    if (!isMobileDevice()) {
+    const result = await firebaseStore.signInWithGoogle();
+    if (result?.mode === "popup") {
       await reloadStateFromStorage();
     }
   } catch (error) {

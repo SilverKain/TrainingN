@@ -76,6 +76,18 @@
     return provider;
   }
 
+  function shouldFallbackToRedirect(error) {
+    const fallbackCodes = new Set([
+      "auth/popup-blocked",
+      "auth/popup-closed-by-user",
+      "auth/cancelled-popup-request",
+      "auth/web-storage-unsupported",
+      "auth/operation-not-supported-in-this-environment"
+    ]);
+
+    return fallbackCodes.has(String(error?.code || ""));
+  }
+
   async function signInWithGoogle() {
     const initialized = await ensureInitialized();
     if (!initialized) return false;
@@ -84,12 +96,21 @@
 
     if (isMobileDevice()) {
       await state.auth.signInWithRedirect(provider);
-      return true;
+      return { mode: "redirect" };
     }
 
-    const result = await state.auth.signInWithPopup(provider);
-    state.user = result.user || state.auth.currentUser || null;
-    return Boolean(state.user);
+    try {
+      const result = await state.auth.signInWithPopup(provider);
+      state.user = result.user || state.auth.currentUser || null;
+      return { mode: "popup", user: state.user };
+    } catch (error) {
+      if (shouldFallbackToRedirect(error)) {
+        await state.auth.signInWithRedirect(provider);
+        return { mode: "redirect" };
+      }
+
+      throw error;
+    }
   }
 
   async function signOut() {
