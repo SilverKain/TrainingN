@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Трекер тренировок</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <main class="app-main">
+      <section class="page active" data-page="home">
+        <div class="hero-card card">
+          <div class="hero-copy">
+            <p class="eyebrow">Личный трекер</p>
+            <h1>Трекер тренировок</h1>
+            <p class="hero-text">Планируйте тренировки на сегодня, ведите базу упражнений и следите за прогрессом в одном приложении.</p>
+          </div>
+          <button id="goTodayBtn" class="btn-primary" type="button">Перейти к тренировке</button>
+        </div>
+
+        <div class="summary-grid">
+          <article class="card summary-card">
+            <span class="summary-icon">📅</span>
+            <div>
+              <p class="summary-label">Сегодня</p>
+              <strong id="todaySummaryCount" class="summary-value">0 упражнений</strong>
+            </div>
+          </article>
+          <article class="card summary-card">
+            <span class="summary-icon">🏋️</span>
+            <div>
+              <p class="summary-label">База</p>
+              <strong id="exerciseSummaryCount" class="summary-value">0 упражнений</strong>
+            </div>
+          </article>
+          <article class="card summary-card">
+            <span class="summary-icon">🔥</span>
+            <div>
+              <p class="summary-label">Активных дней</p>
+              <strong id="activeDaysCount" class="summary-value">0 дней</strong>
+            </div>
+          </article>
+        </div>
+
+        <section class="card quick-card">
+          <div class="section-heading">
+            <div>
+              <h2>Быстрые действия</h2>
+              <p class="muted">Самые важные разделы всегда под рукой.</p>
+            </div>
+          </div>
+
+          <div class="quick-actions">
+            <button class="quick-action" type="button" data-open-page="calendar">
+              <span class="quick-icon">📆</span>
+              <span>
+                <strong>Календарь</strong>
+                <small>План на сегодня и месяц</small>
+              </span>
+            </button>
+            <button class="quick-action" type="button" data-open-page="library">
+              <span class="quick-icon">📋</span>
+              <span>
+                <strong>База упражнений</strong>
+                <small>Карточки, фото и ID</small>
+              </span>
+            </button>
+            <button class="quick-action" type="button" data-open-page="progress">
+              <span class="quick-icon">📈</span>
+              <span>
+                <strong>Прогресс</strong>
+                <small>Короткая сводка по данным</small>
+              </span>
+            </button>
+          </div>
+        </section>
+      </section>
+
+      <section class="page" data-page="calendar">
+        <div class="page-header">
+          <div>
+            <h1>Календарь тренировок</h1>
+            <p id="selectedDateLabel" class="muted">Выбранная дата</p>
+          </div>
+          <button id="todayBtn" class="btn-secondary" type="button">Сегодня</button>
+        </div>
+
+        <section class="card calendar-card">
+          <div class="calendar-header">
+            <button id="prevMonthBtn" class="icon-btn" type="button" aria-label="Предыдущий месяц">←</button>
+            <h2 id="monthLabel"></h2>
+            <button id="nextMonthBtn" class="icon-btn" type="button" aria-label="Следующий месяц">→</button>
+          </div>
+          <div class="weekdays">
+            <span>Пн</span>
+            <span>Вт</span>
+            <span>Ср</span>
+            <span>Чт</span>
+            <span>Пт</span>
+            <span>Сб</span>
+            <span>Вс</span>
+          </div>
+          <div id="calendarGrid" class="calendar-grid"></div>
+        </section>
+
+        <section class="card">
+          <div class="section-heading">
+            <div>
+              <h2>Добавить упражнение на выбранный день</h2>
+              <p class="muted">Выберите дату в календаре, затем добавьте упражнение из базы.</p>
+            </div>
+          </div>
+
+          <form id="scheduleForm" class="form-grid">
+            <label>
+              Упражнение
+              <select id="exerciseSelect" class="input" required></select>
+            </label>
+            <label>
+              Заметка
+              <input id="noteInput" class="input" type="text" placeholder="Например: без отказа">
+            </label>
+            <button type="submit" class="btn-primary">Добавить на день</button>
+          </form>
+        </section>
+
+        <section class="card">
+          <div class="section-heading row">
+            <div>
+              <h2>План на выбранный день</h2>
+              <p class="muted">Упражнения привязаны к конкретной дате из календаря.</p>
+            </div>
+            <div class="action-row">
+              <button id="startWorkoutBtn" class="btn-primary" type="button">Сделать упражнения</button>
+              <button id="clearDayBtn" class="btn-danger" type="button">Очистить день</button>
+            </div>
+          </div>
+
+          <div id="dayExercises" class="stack-list empty-state">На выбранный день пока ничего не запланировано.</div>
+        </section>
+
+        <section id="workoutSessionCard" class="card hidden-block">
+          <div class="section-heading">
+            <div>
+              <h2>Выполнение упражнений на сегодня</h2>
+              <p id="workoutSummary" class="muted">Сделано 0 • Осталось 0</p>
+            </div>
+          </div>
+
+          <div id="workoutTodayList" class="stack-list"></div>
+        </section>
+      </section>
+
+      <section class="page" data-page="library">
+        <div class="page-header">
+          <div>
+            <h1>База упражнений</h1>
+            <p class="muted">База взята из TrainingApp и разбита на разделы по группам мышц.</p>
+          </div>
+        </div>
+
+        <section class="card">
+          <form id="exerciseForm" class="form-grid">
+            <label>
+              Название упражнения
+              <input id="exerciseNameInput" class="input" type="text" required placeholder="Например: Жим лёжа">
+            </label>
+            <label>
+              Картинка
+              <input id="exerciseImageInput" class="input" type="text" placeholder="images/pushups.jpg или https://...">
+            </label>
+            <div class="two-columns">
+              <label>
+                Группа мышц
+                <input id="exerciseGroupInput" class="input" type="text" placeholder="Грудь">
+              </label>
+              <label>
+                Инвентарь
+                <input id="exerciseEquipmentInput" class="input" type="text" placeholder="Штанга">
+              </label>
+            </div>
+            <div class="two-columns">
+              <label>
+                Подходы
+                <input id="exerciseSetsInput" class="input" type="number" min="1" placeholder="3">
+              </label>
+              <label>
+                Повторы
+                <input id="exerciseRepsInput" class="input" type="text" placeholder="10-12">
+              </label>
+            </div>
+            <label>
+              Таймер упражнения (сек)
+              <input id="exerciseTimerInput" class="input" type="number" min="1" placeholder="Например: 30 для планки">
+            </label>
+            <label>
+              Описание
+              <textarea id="exerciseDescriptionInput" class="input" rows="3" placeholder="Короткая техника или подсказка"></textarea>
+            </label>
+            <div class="form-actions">
+              <button id="exerciseSubmitBtn" type="submit" class="btn-primary">Добавить упражнение</button>
+            </div>
+          </form>
+        </section>
+
+        <section class="card">
+          <div class="section-heading">
+            <div>
+              <h2>Список упражнений</h2>
+              <p class="muted">Упражнения сгруппированы по мышцам, чтобы их было легче искать.</p>
+            </div>
+          </div>
+          <div id="exerciseList" class="stack-list"></div>
+        </section>
+      </section>
+
+      <section class="page" data-page="progress">
+        <div class="page-header">
+          <div>
+            <h1>Прогресс</h1>
+            <p class="muted">Короткая сводка по вашей базе и плану тренировок.</p>
+          </div>
+        </div>
+
+        <div class="summary-grid">
+          <article class="card metric-card">
+            <p class="summary-label">Всего упражнений в базе</p>
+            <strong id="metricExercises" class="metric-value">0</strong>
+          </article>
+          <article class="card metric-card">
+            <p class="summary-label">Упражнений на сегодня</p>
+            <strong id="metricToday" class="metric-value">0</strong>
+          </article>
+          <article class="card metric-card">
+            <p class="summary-label">Запланированных дней</p>
+            <strong id="metricDays" class="metric-value">0</strong>
+          </article>
+        </div>
+
+        <section class="card">
+          <div class="section-heading">
+            <div>
+              <h2>Последние добавленные упражнения</h2>
+              <p class="muted">Чтобы быстро вернуться к новым карточкам.</p>
+            </div>
+          </div>
+          <div id="recentExercises" class="stack-list"></div>
+        </section>
+
+        <section class="card">
+          <div class="section-heading">
+            <div>
+              <h2>История выполненных упражнений</h2>
+              <p class="muted">Показывает, какие упражнения были сделаны в конкретный день.</p>
+            </div>
+          </div>
+          <div id="progressHistory" class="stack-list"></div>
+        </section>
+      </section>
+    </main>
+
+    <nav class="bottom-nav" aria-label="Навигация">
+      <button class="nav-btn active" type="button" data-page-btn="home"><span>🏠</span><small>Главная</small></button>
+      <button class="nav-btn" type="button" data-page-btn="calendar"><span>📅</span><small>Сегодня</small></button>
+      <button class="nav-btn" type="button" data-page-btn="library"><span>📋</span><small>База</small></button>
+      <button class="nav-btn" type="button" data-page-btn="progress"><span>📈</span><small>Прогресс</small></button>
+    </nav>
+  </div>
+
+  <script src="exercise-db.js"></script>
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
