@@ -314,14 +314,14 @@ select.input {
 
 .calendar-card {
   display: grid;
-  gap: 14px;
+  gap: 10px;
 }
 
 .weekdays,
 .calendar-grid {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 8px;
+  gap: 4px;
 }
 
 .weekdays {
@@ -331,13 +331,14 @@ select.input {
   color: var(--muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  margin-bottom: 2px;
 }
 
 .calendar-day {
-  min-height: 78px;
+  min-height: 70px;
   border: 1px solid var(--line);
-  border-radius: 16px;
-  padding: 10px;
+  border-radius: 12px;
+  padding: 8px 7px;
   background: linear-gradient(135deg, rgba(51, 65, 85, 0.35), rgba(71, 85, 105, 0.15));
   color: var(--text);
   text-align: left;
@@ -357,12 +358,13 @@ select.input {
 }
 
 .calendar-day-number {
+  font-size: 0.95rem;
   font-weight: 800;
 }
 
 .calendar-day-count {
-  margin-top: 8px;
-  font-size: 11px;
+  margin-top: 5px;
+  font-size: 10px;
   color: var(--success);
 }
 
@@ -719,7 +721,44 @@ select.input {
   }
 
   .calendar-day {
-    min-height: 68px;
+    min-height: 56px;
+    padding: 7px 6px;
+    border-radius: 10px;
+  }
+
+  .calendar-card {
+    gap: 8px;
+  }
+
+  .weekdays,
+  .calendar-grid {
+    gap: 3px;
+  }
+
+  .weekdays {
+    font-size: 11px;
+  }
+
+  .calendar-day-number {
+    font-size: 0.88rem;
+  }
+
+  .calendar-day-count {
+    margin-top: 4px;
+    font-size: 9px;
+  }
+
+  .calendar-header .icon-btn {
+    min-width: 38px;
+    min-height: 38px;
+    padding: 8px 10px;
+    border-radius: 12px;
+    font-size: 0.95rem;
+  }
+
+  .calendar-header h2 {
+    font-size: 1rem;
+    text-align: center;
   }
 
   .rest-timer,
