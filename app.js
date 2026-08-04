@@ -1,10 +1,11 @@
 const {
   createExerciseId,
+  defaultData,
   loadState,
   saveState: saveTrainingState
 } = window.TrainingData;
 
-let state = loadState();
+let state = structuredClone(defaultData);
 let currentMonth = startOfMonth(new Date());
 const todayKey = toDateKey(new Date());
 let selectedDate = todayKey;
@@ -144,7 +145,9 @@ function switchPage(pageName) {
 }
 
 function saveState() {
-  saveTrainingState(state);
+  saveTrainingState(state).catch((error) => {
+    console.error("State save failed:", error);
+  });
 }
 
 function renderAll() {
@@ -698,3 +701,16 @@ function escapeAttribute(value) {
 
 renderAll();
 switchPage(currentPage);
+
+initializeApp();
+
+async function initializeApp() {
+  try {
+    state = await loadState();
+  } catch (error) {
+    console.error("State load failed. Using local default state:", error);
+  }
+
+  renderAll();
+  switchPage(currentPage);
+}

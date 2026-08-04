@@ -56,6 +56,7 @@ window.TrainingData = (() => {
       { exerciseId: "24", note: "Основной блок 5/5: косые и поперечная мышца живота" }
     ]
   ];
+  const firebaseStore = window.TrainingFirebase || null;
 
   const defaultData = {
     exercises: seededExercises,
@@ -235,24 +236,70 @@ window.TrainingData = (() => {
     return applySeededPlans(normalized);
   }
 
-  function loadState() {
+  function getStoredPayload() {
     try {
-      const saved =
+      return (
         localStorage.getItem(STORAGE_KEY) ||
-        LEGACY_STORAGE_KEYS.map((key) => localStorage.getItem(key)).find(Boolean);
-      const parsed = saved ? JSON.parse(saved) : structuredClone(defaultData);
-      const normalized = normalizeState(parsed);
-      saveState(normalized);
-      return normalized;
+        LEGACY_STORAGE_KEYS.map((key) => localStorage.getItem(key)).find(Boolean)
+      );
     } catch {
-      const normalized = normalizeState(structuredClone(defaultData));
-      saveState(normalized);
-      return normalized;
+      return null;
     }
   }
 
-  function saveState(state) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  function loadLocalState() {
+    try {
+      const saved = getStoredPayload();
+      const parsed = saved ? JSON.parse(saved) : structuredClone(defaultData);
+      return normalizeState(parsed);
+    } catch {
+      return normalizeState(structuredClone(defaultData));
+    }
+  }
+
+  function saveLocalState(state) {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    } catch (error) {
+      console.error("Unable to save state to localStorage:", error);
+    }
+  }
+
+  async function loadState() {
+    const localState = loadLocalState();
+
+    if (!firebaseStore?.isConfigured?.()) {
+      return localState;
+    }
+
+    try {
+      const remoteState = await firebaseStore.loadState();
+      if (!remoteState) {
+        await firebaseStore.saveState(localState);
+        return localState;
+      }
+
+      const normalizedRemoteState = normalizeState(remoteState);
+      saveLocalState(normalizedRemoteState);
+      return normalizedRemoteState;
+    } catch (error) {
+      console.error("Unable to load state from Firebase. Falling back to localStorage:", error);
+      return localState;
+    }
+  }
+
+  async function saveState(state) {
+    saveLocalState(state);
+
+    if (!firebaseStore?.isConfigured?.()) return false;
+
+    try {
+      await firebaseStore.saveState(state);
+      return true;
+    } catch (error) {
+      console.error("Unable to save state to Firebase. Local copy is preserved:", error);
+      return false;
+    }
   }
 
   return {
