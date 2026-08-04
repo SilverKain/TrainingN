@@ -62,7 +62,10 @@ window.TrainingData = (() => {
     exercises: seededExercises,
     removedExerciseIds: [],
     schedule: {},
-    appliedPlanIds: []
+    appliedPlanIds: [],
+    syncMeta: {
+      lastModifiedAt: 0
+    }
   };
 
   function createExerciseId(exercises = []) {
@@ -197,7 +200,10 @@ window.TrainingData = (() => {
       schedule: source?.schedule && typeof source.schedule === "object" ? source.schedule : {},
       appliedPlanIds: Array.isArray(source?.appliedPlanIds)
         ? source.appliedPlanIds.map((value) => String(value || "").trim()).filter(Boolean)
-        : []
+        : [],
+      syncMeta: {
+        lastModifiedAt: Math.max(0, Number(source?.syncMeta?.lastModifiedAt) || 0)
+      }
     };
 
     normalized.exercises = mergeExercises(
@@ -257,6 +263,12 @@ window.TrainingData = (() => {
     }
   }
 
+  function stampStateForSave(state) {
+    state.syncMeta ??= {};
+    state.syncMeta.lastModifiedAt = Date.now();
+    return state;
+  }
+
   function saveLocalState(state) {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
@@ -280,6 +292,17 @@ window.TrainingData = (() => {
       }
 
       const normalizedRemoteState = normalizeState(remoteState);
+      const localUpdatedAt = Number(localState?.syncMeta?.lastModifiedAt) || 0;
+      const remoteUpdatedAt = Number(normalizedRemoteState?.syncMeta?.lastModifiedAt) || 0;
+
+      if (localUpdatedAt >= remoteUpdatedAt) {
+        saveLocalState(localState);
+        if (localUpdatedAt > remoteUpdatedAt) {
+          await firebaseStore.saveState(localState);
+        }
+        return localState;
+      }
+
       saveLocalState(normalizedRemoteState);
       return normalizedRemoteState;
     } catch (error) {
@@ -289,12 +312,13 @@ window.TrainingData = (() => {
   }
 
   async function saveState(state) {
-    saveLocalState(state);
+    const stampedState = stampStateForSave(state);
+    saveLocalState(stampedState);
 
     if (!firebaseStore?.isConfigured?.()) return false;
 
     try {
-      await firebaseStore.saveState(state);
+      await firebaseStore.saveState(stampedState);
       return true;
     } catch (error) {
       console.error("Unable to save state to Firebase. Local copy is preserved:", error);
