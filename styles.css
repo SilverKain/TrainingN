@@ -61,6 +61,20 @@ textarea {
   display: flex;
 }
 
+.auth-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.auth-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
 .card {
   background: var(--panel);
   border: 1px solid var(--line);
@@ -634,6 +648,10 @@ select.input {
   font-weight: 700;
 }
 
+.hidden-inline {
+  display: none;
+}
+
 .empty-state {
   border: 1px dashed var(--line);
   border-radius: 18px;
@@ -694,7 +712,8 @@ select.input {
 
   .page-header,
   .calendar-header,
-  .section-heading.row {
+  .section-heading.row,
+  .auth-card {
     flex-direction: column;
     align-items: stretch;
   }

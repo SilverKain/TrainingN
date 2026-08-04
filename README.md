@@ -18,17 +18,25 @@
 
 - `firebase-config.js` — рабочий файл конфигурации;
 - `firebase-config.example.js` — пример заполнения;
-- `firebase-service.js` — подключение анонимной авторизации и Firestore;
+- `firebase-service.js` — подключение Google Sign-In и Firestore;
 - `firestore.rules` — правила доступа к данным.
 
-### Что нужно сделать
+### Что нужно сделать в Firebase Console
 
-1. В Firebase Console создайте проект.
-2. Добавьте Web App.
+1. Создайте проект Firebase.
+2. Добавьте `Web App`.
 3. Скопируйте конфиг Firebase Web App в `firebase-config.js`.
-4. Включите `Authentication -> Sign-in method -> Anonymous`.
-5. Создайте базу `Firestore Database` в production или test mode.
-6. Загрузите правила из `firestore.rules`.
+4. Включите `Authentication -> Sign-in method -> Google`.
+5. В `Authentication -> Settings -> Authorized domains` добавьте:
+   - `silverkain.github.io`
+6. Создайте `Firestore Database`.
+7. Опубликуйте правила из `firestore.rules`.
+
+### Как это работает
+
+- На ПК вход открывается через popup Google.
+- На телефоне вход идёт через redirect Google.
+- После входа один и тот же аккаунт сможет использовать приложение и на ПК, и на телефоне.
 
 ### Где будут храниться данные
 
@@ -36,4 +44,4 @@
 
 `users/{uid}/training/appState`
 
-У каждого анонимного пользователя будет свой отдельный документ состояния.
+У каждого Google-аккаунта будет свой отдельный документ состояния.

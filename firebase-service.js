@@ -6,7 +6,8 @@
     auth: null,
     db: null,
     user: null,
-    initPromise: null
+    initPromise: null,
+    authReadyPromise: null
   };
 
   function isConfigured() {
@@ -17,6 +18,10 @@
       firebaseConfig.projectId &&
       firebaseConfig.appId
     );
+  }
+
+  function isMobileDevice() {
+    return /Android|iPhone|iPad|iPod|Mobile/i.test(global.navigator?.userAgent || "");
   }
 
   async function ensureInitialized() {
@@ -30,8 +35,12 @@
       state.auth = global.firebase.auth();
       state.db = global.firebase.firestore();
 
-      if (!state.auth.currentUser) {
-        await state.auth.signInAnonymously();
+      await state.auth.setPersistence(global.firebase.auth.Auth.Persistence.LOCAL);
+
+      try {
+        await state.auth.getRedirectResult();
+      } catch (error) {
+        console.error("Firebase redirect auth failed:", error);
       }
 
       state.user = state.auth.currentUser;
@@ -45,6 +54,78 @@
     return state.initPromise;
   }
 
+  async function waitForAuthReady() {
+    const initialized = await ensureInitialized();
+    if (!initialized) return null;
+    if (state.authReadyPromise) return state.authReadyPromise;
+
+    state.authReadyPromise = new Promise((resolve) => {
+      const unsubscribe = state.auth.onAuthStateChanged((user) => {
+        state.user = user || null;
+        unsubscribe();
+        resolve(state.user);
+      });
+    });
+
+    return state.authReadyPromise;
+  }
+
+  function createGoogleProvider() {
+    const provider = new global.firebase.auth.GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: "select_account" });
+    return provider;
+  }
+
+  async function signInWithGoogle() {
+    const initialized = await ensureInitialized();
+    if (!initialized) return false;
+
+    const provider = createGoogleProvider();
+
+    if (isMobileDevice()) {
+      await state.auth.signInWithRedirect(provider);
+      return true;
+    }
+
+    const result = await state.auth.signInWithPopup(provider);
+    state.user = result.user || state.auth.currentUser || null;
+    return Boolean(state.user);
+  }
+
+  async function signOut() {
+    const initialized = await ensureInitialized();
+    if (!initialized) return false;
+
+    await state.auth.signOut();
+    state.user = null;
+    return true;
+  }
+
+  function onAuthStateChanged(callback) {
+    if (!isConfigured()) {
+      callback(null);
+      return () => {};
+    }
+
+    ensureInitialized().then((initialized) => {
+      if (!initialized) {
+        callback(null);
+        return;
+      }
+
+      initialized.auth.onAuthStateChanged((user) => {
+        state.user = user || null;
+        callback(state.user);
+      });
+    });
+
+    return () => {};
+  }
+
+  function getCurrentUser() {
+    return state.user;
+  }
+
   function getDocumentRef() {
     if (!state.db || !state.user) return null;
     return state.db.collection("users").doc(state.user.uid).collection("training").doc("appState");
@@ -53,6 +134,8 @@
   async function loadState() {
     const initialized = await ensureInitialized();
     if (!initialized) return null;
+
+    await waitForAuthReady();
 
     const docRef = getDocumentRef();
     if (!docRef) return null;
@@ -64,6 +147,8 @@
   async function saveState(nextState) {
     const initialized = await ensureInitialized();
     if (!initialized) return false;
+
+    await waitForAuthReady();
 
     const docRef = getDocumentRef();
     if (!docRef) return false;
@@ -82,8 +167,12 @@
   global.TrainingFirebase = {
     isConfigured,
     ensureInitialized,
+    waitForAuthReady,
+    signInWithGoogle,
+    signOut,
+    onAuthStateChanged,
+    getCurrentUser,
     loadState,
     saveState
   };
 })(window);
-

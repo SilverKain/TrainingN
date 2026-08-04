@@ -4,12 +4,14 @@ const {
   loadState,
   saveState: saveTrainingState
 } = window.TrainingData;
+const firebaseStore = window.TrainingFirebase || null;
 
 let state = structuredClone(defaultData);
 let currentMonth = startOfMonth(new Date());
 const todayKey = toDateKey(new Date());
 let selectedDate = todayKey;
 let currentPage = "home";
+let authUser = null;
 
 let activeRestTimerId = null;
 let restTimerInterval = null;
@@ -30,6 +32,10 @@ const progressHistory = document.getElementById("progressHistory");
 const workoutSessionCard = document.getElementById("workoutSessionCard");
 const workoutTodayList = document.getElementById("workoutTodayList");
 const workoutSummary = document.getElementById("workoutSummary");
+const authStatusTitle = document.getElementById("authStatusTitle");
+const authStatusText = document.getElementById("authStatusText");
+const googleSignInBtn = document.getElementById("googleSignInBtn");
+const googleSignOutBtn = document.getElementById("googleSignOutBtn");
 const pageButtons = document.querySelectorAll("[data-page-btn]");
 const pages = document.querySelectorAll("[data-page]");
 const exerciseForm = document.getElementById("exerciseForm");
@@ -58,6 +64,42 @@ document.querySelectorAll("[data-open-page]").forEach((button) => {
 
 pageButtons.forEach((button) => {
   button.addEventListener("click", () => switchPage(button.getAttribute("data-page-btn")));
+});
+
+googleSignInBtn.addEventListener("click", async () => {
+  if (!firebaseStore?.isConfigured?.()) return;
+
+  googleSignInBtn.disabled = true;
+  googleSignInBtn.textContent = "Вход...";
+
+  try {
+    await firebaseStore.signInWithGoogle();
+    if (!isMobileDevice()) {
+      await reloadStateFromStorage();
+    }
+  } catch (error) {
+    console.error("Google sign-in failed:", error);
+    alert("Не удалось выполнить вход через Google. Проверьте настройки Firebase.");
+  } finally {
+    renderAuthStatus();
+  }
+});
+
+googleSignOutBtn.addEventListener("click", async () => {
+  if (!firebaseStore?.isConfigured?.()) return;
+
+  googleSignOutBtn.disabled = true;
+
+  try {
+    await firebaseStore.signOut();
+    state = await loadState();
+    renderAll();
+  } catch (error) {
+    console.error("Google sign-out failed:", error);
+    alert("Не удалось выйти из аккаунта Google.");
+  } finally {
+    renderAuthStatus();
+  }
 });
 
 exerciseForm.addEventListener("submit", (event) => {
@@ -148,6 +190,43 @@ function saveState() {
   saveTrainingState(state).catch((error) => {
     console.error("State save failed:", error);
   });
+}
+
+function renderAuthStatus() {
+  const firebaseReady = firebaseStore?.isConfigured?.();
+  authUser = firebaseReady ? firebaseStore.getCurrentUser() : null;
+
+  if (!firebaseReady) {
+    authStatusTitle.textContent = "Локальный режим";
+    authStatusText.textContent = "Данные сохраняются только в этом браузере.";
+    googleSignInBtn.classList.remove("hidden-inline");
+    googleSignOutBtn.classList.add("hidden-inline");
+    googleSignInBtn.disabled = false;
+    googleSignInBtn.textContent = "Войти через Google";
+    googleSignOutBtn.disabled = false;
+    return;
+  }
+
+  if (authUser) {
+    authStatusTitle.textContent = authUser.displayName || authUser.email || "Вход выполнен";
+    authStatusText.textContent = authUser.email
+      ? `Синхронизация через Firebase включена: ${authUser.email}`
+      : "Синхронизация через Firebase включена.";
+    googleSignInBtn.classList.add("hidden-inline");
+    googleSignOutBtn.classList.remove("hidden-inline");
+    googleSignOutBtn.disabled = false;
+    googleSignInBtn.disabled = false;
+    googleSignInBtn.textContent = "Войти через Google";
+    return;
+  }
+
+  authStatusTitle.textContent = "Firebase подключён";
+  authStatusText.textContent = "Войдите через Google, чтобы использовать один аккаунт на ПК и телефоне.";
+  googleSignInBtn.classList.remove("hidden-inline");
+  googleSignOutBtn.classList.add("hidden-inline");
+  googleSignInBtn.disabled = false;
+  googleSignInBtn.textContent = "Войти через Google";
+  googleSignOutBtn.disabled = false;
 }
 
 function renderAll() {
@@ -706,11 +785,29 @@ initializeApp();
 
 async function initializeApp() {
   try {
-    state = await loadState();
+    if (firebaseStore?.isConfigured?.()) {
+      await firebaseStore.ensureInitialized();
+      firebaseStore.onAuthStateChanged(async () => {
+        renderAuthStatus();
+        await reloadStateFromStorage();
+      });
+    }
+
+    await reloadStateFromStorage();
   } catch (error) {
     console.error("State load failed. Using local default state:", error);
   }
 
+  renderAuthStatus();
   renderAll();
   switchPage(currentPage);
+}
+
+async function reloadStateFromStorage() {
+  state = await loadState();
+  renderAll();
+}
+
+function isMobileDevice() {
+  return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || "");
 }

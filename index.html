@@ -9,6 +9,17 @@
 <body>
   <div class="app-shell">
     <main class="app-main">
+      <section class="card auth-card">
+        <div>
+          <strong id="authStatusTitle">Локальный режим</strong>
+          <p id="authStatusText" class="muted">Данные сохраняются только в этом браузере.</p>
+        </div>
+        <div class="auth-actions">
+          <button id="googleSignInBtn" class="btn-primary" type="button">Войти через Google</button>
+          <button id="googleSignOutBtn" class="btn-secondary hidden-inline" type="button">Выйти</button>
+        </div>
+      </section>
+
       <section class="page active" data-page="home">
         <div class="hero-card card">
           <div class="hero-copy">
