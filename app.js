@@ -508,16 +508,21 @@ function renderExerciseInnerTimer(item) {
 
   if (activeRestTimerId === item.id && restSecondsLeft > 0) {
     const isExerciseBreak = activeRestTimerMode === "exercise";
+    const restProgress = Math.max(0, Math.min(100, ((30 - restSecondsLeft) / 30) * 100));
     parts.push(`
-      <div class="rest-timer">
-        <div>
-          <strong>${isExerciseBreak ? "Пауза между упражнениями" : "Отдых между подходами"}</strong>
-          <p class="muted">${isExerciseBreak ? `Следующее упражнение можно начинать через ${restSecondsLeft} сек.` : `Следующий подход можно начинать через ${restSecondsLeft} сек.`}</p>
-        </div>
-        <div class="rest-timer-side">
-          <div class="rest-timer-value">${restSecondsLeft}</div>
-          <button class="btn-secondary" type="button" data-skip-rest="${item.id}">Пропустить</button>
-        </div>
+      <div class="timer-button-wrap">
+        <button
+          class="timer-fill-button timer-fill-button-rest active"
+          type="button"
+          data-skip-rest="${item.id}"
+          style="--timer-progress:${restProgress.toFixed(2)}%;"
+        >
+          <span class="timer-fill-button-bg"></span>
+          <span class="timer-fill-button-content">
+            <strong>${restSecondsLeft}</strong>
+            <small>${isExerciseBreak ? `Следующее упражнение через ${restSecondsLeft} сек.` : `Следующий подход через ${restSecondsLeft} сек.`}</small>
+          </span>
+        </button>
       </div>
     `);
   }
