@@ -16,6 +16,7 @@ let authUser = null;
 let activeRestTimerId = null;
 let restTimerInterval = null;
 let restSecondsLeft = 30;
+let activeRestTimerMode = "set";
 
 let activeExerciseTimerId = null;
 let exerciseTimerInterval = null;
@@ -27,7 +28,6 @@ const selectedDateLabel = document.getElementById("selectedDateLabel");
 const dayExercises = document.getElementById("dayExercises");
 const exerciseList = document.getElementById("exerciseList");
 const exerciseSelect = document.getElementById("exerciseSelect");
-const recentExercises = document.getElementById("recentExercises");
 const progressHistory = document.getElementById("progressHistory");
 const workoutSessionCard = document.getElementById("workoutSessionCard");
 const workoutTodayList = document.getElementById("workoutTodayList");
@@ -257,13 +257,6 @@ function renderProgress() {
   document.getElementById("metricToday").textContent = todayItems.length;
   document.getElementById("metricDays").textContent = plannedDays;
 
-  if (!state.exercises.length) {
-    recentExercises.innerHTML = '<div class="empty-state">Пока нет упражнений в базе.</div>';
-  } else {
-    recentExercises.innerHTML = getOrderedExercises().slice(0, 3).map(renderExerciseCard).join("");
-    bindExerciseRemoveButtons(recentExercises);
-  }
-
   if (!completedDays.length) {
     progressHistory.innerHTML = '<div class="empty-state">Пока нет завершённых упражнений по дням.</div>';
     return;
@@ -438,14 +431,10 @@ function renderWorkoutSession() {
       target.completedSets = Math.min(target.totalSets, target.completedSets + 1);
       target.completed = target.completedSets >= target.totalSets;
 
-      if (target.timerSeconds > 0) {
-        startExerciseTimer(id, target.timerSeconds);
-      }
-
       if (!target.completed) {
-        startRestTimer(id);
-      } else if (activeRestTimerId === id) {
-        stopRestTimer();
+        startRestTimer(id, "set");
+      } else {
+        startRestTimer(id, "exercise");
       }
 
       saveState();
@@ -518,11 +507,12 @@ function renderExerciseInnerTimer(item) {
   const parts = [];
 
   if (activeRestTimerId === item.id && restSecondsLeft > 0) {
+    const isExerciseBreak = activeRestTimerMode === "exercise";
     parts.push(`
       <div class="rest-timer">
         <div>
-          <strong>Отдых между подходами</strong>
-          <p class="muted">Следующий подход можно начинать через ${restSecondsLeft} сек.</p>
+          <strong>${isExerciseBreak ? "Пауза между упражнениями" : "Отдых между подходами"}</strong>
+          <p class="muted">${isExerciseBreak ? `Следующее упражнение можно начинать через ${restSecondsLeft} сек.` : `Следующий подход можно начинать через ${restSecondsLeft} сек.`}</p>
         </div>
         <div class="rest-timer-side">
           <div class="rest-timer-value">${restSecondsLeft}</div>
@@ -535,18 +525,22 @@ function renderExerciseInnerTimer(item) {
   if (Number(item.timerSeconds) > 0) {
     const duration = getExerciseDuration(item);
     const isActive = activeExerciseTimerId === item.id && exerciseSecondsLeft > 0;
+    const timerValue = isActive ? exerciseSecondsLeft : duration;
+    const progress = isActive ? Math.max(0, Math.min(100, ((duration - exerciseSecondsLeft) / duration) * 100)) : 0;
     parts.push(`
-      <div class="rest-timer">
-        <div>
-          <strong>Таймер упражнения</strong>
-          <p class="muted">Для этого упражнения можно запустить встроенный таймер.</p>
-        </div>
-        <div class="rest-timer-side">
-          <div class="rest-timer-value">${isActive ? exerciseSecondsLeft : duration}</div>
-          <button class="${isActive ? "btn-secondary" : "btn-primary"}" type="button" data-start-exercise-timer="${item.id}">
-            ${isActive ? "Идёт таймер" : "Запустить таймер"}
-          </button>
-        </div>
+      <div class="timer-button-wrap">
+        <button
+          class="timer-fill-button ${isActive ? "active" : ""}"
+          type="button"
+          data-start-exercise-timer="${item.id}"
+          style="--timer-progress:${progress.toFixed(2)}%;"
+        >
+          <span class="timer-fill-button-bg"></span>
+          <span class="timer-fill-button-content">
+            <strong>${timerValue}</strong>
+            <small>${isActive ? "Идёт таймер" : "Запустить таймер"}</small>
+          </span>
+        </button>
       </div>
     `);
   }
@@ -554,9 +548,11 @@ function renderExerciseInnerTimer(item) {
   return parts.join("");
 }
 
-function startRestTimer(itemId) {
+function startRestTimer(itemId, mode = "set") {
+  stopExerciseTimer();
   stopRestTimer(false);
   activeRestTimerId = itemId;
+  activeRestTimerMode = mode;
   restSecondsLeft = 30;
   renderWorkoutSession();
 
@@ -575,10 +571,12 @@ function stopRestTimer(resetValue = true) {
   restTimerInterval = null;
   if (resetValue) restSecondsLeft = 30;
   activeRestTimerId = null;
+  activeRestTimerMode = "set";
 }
 
 function startExerciseTimer(itemId, duration) {
   if (!duration) return;
+  stopRestTimer();
   stopExerciseTimer(false);
   activeExerciseTimerId = itemId;
   exerciseSecondsLeft = duration;
